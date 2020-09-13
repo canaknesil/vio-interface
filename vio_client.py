@@ -58,9 +58,17 @@ def vio_server_test(sckt):
         print("Test command unsuccessfull.")
         return False
 
-    res = execute_vio_command(sock, "asdf")
+    res = execute_vio_command(sckt, "asdf")
     if res != None:
         print("Unsupported command did not reported.")
+        return False
+
+    res = execute_vio_command(sckt, "read")
+    if res == None:
+        return False
+
+    res = execute_vio_command(sckt, "write")
+    if res == None:
         return False
 
     return True

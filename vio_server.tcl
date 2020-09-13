@@ -1,4 +1,5 @@
-
+set mode test
+#set mode vivado
 
 #
 # Utilities
@@ -13,9 +14,39 @@ proc print_info {msg} {
 # VIO Server Commands
 #
 
-proc vio_cmd_test {} {
-    print_info "Test command received."
-    return "Test successfull."
+switch $mode {
+    test {
+	
+	proc vio_cmd_test {} {
+	    print_info "Test command received."
+	    return "Test successfull."
+	}
+	proc vio_cmd_read {} {
+	    print_info "Read command received."
+	    return "5"
+	}
+	proc vio_cmd_write {} {
+	    print_info "Write command received."
+	    return ""
+	}
+	
+    }
+    vivado {
+	
+	proc vio_cmd_test {} {
+	    print_info "Test command received."
+	    return "Test successfull."
+	}
+	proc vio_cmd_read {} {
+	    refresh_hw_vio [get_hw_vios -of_objects [get_hw_devices xc7a100t_0] -filter {CELL_NAME=~"vio_dummy_aes"}]
+	    get_property INPUT_VALUE [get_hw_probes aes_ct_2 -of_objects [get_hw_vios -of_objects [get_hw_devices xc7a100t_0] -filter {CELL_NAME=~"vio_dummy_aes"}]]
+	}
+	proc vio_cmd_write {} {
+	    set_property OUTPUT_VALUE 00000000000000000000000000000001 [get_hw_probes aes_pt_2 -of_objects [get_hw_vios -of_objects [get_hw_devices xc7a100t_0] -filter {CELL_NAME=~"vio_dummy_aes"}]]
+	    commit_hw_vio [get_hw_probes {aes_pt_2} -of_objects [get_hw_vios -of_objects [get_hw_devices xc7a100t_0] -filter {CELL_NAME=~"vio_dummy_aes"}]]
+	}
+	
+    }
 }
 
 #
@@ -43,14 +74,15 @@ proc vio_read_command {channel} {
 	print_info "Channel closed by client."
         fileevent $channel readable {}
     } else {
-	if {[string match $line exit]} {
-	    vio_answer $channel "1"
-	    after idle "close $channel;set out 1"
-	} elseif {[string match $line test]} {
-	    set result [vio_cmd_test]
-	    vio_answer $channel "1$result"
-	} else {
-	    vio_answer $channel "0"
+	switch [lindex $line 0] {
+	    exit {
+		vio_answer $channel "1"
+		after idle "close $channel;set out 1"
+	    }
+	    test  {vio_answer $channel "1[vio_cmd_test]"}
+	    read  {vio_answer $channel "1[vio_cmd_read]"}
+	    write {vio_answer $channel "1[vio_cmd_write]"}
+	    default {vio_answer $channel "0"}
 	}
     }
 }
@@ -68,6 +100,20 @@ if {$port == ""} {
     print_info "Provided port: $port"
     print_info "Port must be an integer, exiting."
     exit
+}
+
+# Prepare vivado
+if {[string match $mode vivado]} {
+    open_project /home/canaknesil/Documents/workspace/aes-vio_project/aes128_verilog.xpr
+    #update_compile_order -fileset sources_1
+    open_hw_manager
+    connect_hw_server -allow_non_jtag
+    open_hw_target
+    set_property PROGRAM.FILE {/home/canaknesil/Documents/workspace/aes-vio_project/aes128_verilog.runs/impl_100t/cw305_top.bit} [get_hw_devices xc7a100t_0]
+    set_property PROBES.FILE {/home/canaknesil/Documents/workspace/aes-vio_project/aes128_verilog.runs/impl_100t/cw305_top.ltx} [get_hw_devices xc7a100t_0]
+    set_property FULL_PROBES.FILE {/home/canaknesil/Documents/workspace/aes-vio_project/aes128_verilog.runs/impl_100t/cw305_top.ltx} [get_hw_devices xc7a100t_0]
+    current_hw_device [get_hw_devices xc7a100t_0]
+    refresh_hw_device [lindex [get_hw_devices xc7a100t_0] 0]
 }
 
 # Start server
