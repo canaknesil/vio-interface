@@ -93,10 +93,7 @@ proc vio_read_command {channel} {
 
 # Read command line inputs
 set port [lindex $argv 0]
-if {$port == ""} {
-    set port 33000
-    print_info "Port is not specified, using $port."
-} elseif {![string is integer $port]} {
+if {![string is integer $port]} {
     print_info "Provided port: $port"
     print_info "Port must be an integer, exiting."
     exit
