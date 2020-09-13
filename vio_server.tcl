@@ -21,12 +21,12 @@ switch $mode {
 	    print_info "Test command received."
 	    return "Test successfull."
 	}
-	proc vio_cmd_read {} {
-	    print_info "Read command received."
-	    return "5"
+	proc vio_cmd_read {name} {
+	    print_info "Read command received. Reading $name."
+	    return "0"
 	}
-	proc vio_cmd_write {} {
-	    print_info "Write command received."
+	proc vio_cmd_write {name value} {
+	    print_info "Write command received. Writing $name $value."
 	    return ""
 	}
 	
@@ -37,11 +37,11 @@ switch $mode {
 	    print_info "Test command received."
 	    return "Test successfull."
 	}
-	proc vio_cmd_read {} {
+	proc vio_cmd_read {name} {
 	    refresh_hw_vio [get_hw_vios -of_objects [get_hw_devices xc7a100t_0] -filter {CELL_NAME=~"vio_dummy_aes"}]
 	    get_property INPUT_VALUE [get_hw_probes aes_ct_2 -of_objects [get_hw_vios -of_objects [get_hw_devices xc7a100t_0] -filter {CELL_NAME=~"vio_dummy_aes"}]]
 	}
-	proc vio_cmd_write {} {
+	proc vio_cmd_write {name value} {
 	    set_property OUTPUT_VALUE 00000000000000000000000000000001 [get_hw_probes aes_pt_2 -of_objects [get_hw_vios -of_objects [get_hw_devices xc7a100t_0] -filter {CELL_NAME=~"vio_dummy_aes"}]]
 	    commit_hw_vio [get_hw_probes {aes_pt_2} -of_objects [get_hw_vios -of_objects [get_hw_devices xc7a100t_0] -filter {CELL_NAME=~"vio_dummy_aes"}]]
 	}
@@ -74,14 +74,16 @@ proc vio_read_command {channel} {
 	print_info "Channel closed by client."
         fileevent $channel readable {}
     } else {
-	switch [lindex $line 0] {
+	set command [lindex $line 0]
+	set parameters [lreplace $line 0 0]
+	switch $command {
 	    exit {
 		vio_answer $channel "1"
 		after idle "close $channel;set out 1"
 	    }
-	    test  {vio_answer $channel "1[vio_cmd_test]"}
-	    read  {vio_answer $channel "1[vio_cmd_read]"}
-	    write {vio_answer $channel "1[vio_cmd_write]"}
+	    test  {vio_answer $channel "1[vio_cmd_test  {*}$parameters]"}
+	    read  {vio_answer $channel "1[vio_cmd_read  {*}$parameters]"}
+	    write {vio_answer $channel "1[vio_cmd_write {*}$parameters]"}
 	    default {vio_answer $channel "0"}
 	}
     }

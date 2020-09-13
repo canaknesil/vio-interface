@@ -10,7 +10,7 @@ class Vio:
     vio_server_script = os.path.dirname(__file__) + "/vio_server.tcl"
 
     def __init__(self,
-                 tclsh="tclsh",
+                 tclsh=["tclsh"],
                  port=33000):
         self.tclsh = tclsh
         self.port = port
@@ -18,7 +18,7 @@ class Vio:
     def start(self):
         # Start server
         def vio_server_start():
-            subprocess.run([self.tclsh, Vio.vio_server_script, str(self.port)],
+            subprocess.run([*self.tclsh, Vio.vio_server_script, str(self.port)],
                            stdout=sys.stdout, stderr=sys.stderr)
             
         self.vio_server_thread = threading.Thread(target=vio_server_start)
@@ -57,6 +57,16 @@ class Vio:
         else:
             print("Response has invalid status byte")
             return None
+
+    def read(self, name):
+        return self._execute_vio_command("read " + name)
+
+    def write(self, name, value):
+        res = self._execute_vio_command("write " + name + " " + str(value))
+        if res != None:
+            return True
+        else:
+            return False
         
     def _print_response(response):
         print("Response: \"" + response + "\"")
@@ -70,14 +80,6 @@ class Vio:
         res = self._execute_vio_command("asdf")
         if res != None:
             print("Unsupported command did not reported.")
-            return False
-        
-        res = self._execute_vio_command("read")
-        if res == None:
-            return False
-        
-        res = self._execute_vio_command("write")
-        if res == None:
             return False
         
         return True
@@ -98,9 +100,8 @@ def main():
         print("Server test successfull.")
     else:
         print("Server test FAILED.")
-
-    # Read Write
-
+    print(vio.read("led0"))
+    vio.write("sw0", 1)
     vio.stop()
 
 
