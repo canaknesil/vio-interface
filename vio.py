@@ -3,10 +3,11 @@ import subprocess
 import threading
 import time
 import sys
+import os
 
 class Vio:
     max_response_size = 1024
-    vio_server_script = "vio_server.tcl"
+    vio_server_script = os.path.dirname(__file__) + "/vio_server.tcl"
 
     def __init__(self,
                  tclsh="tclsh",
